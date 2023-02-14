@@ -34,13 +34,20 @@ namespace BLL.Services
             _commonService = commonService;
         }
 
-        public List<Course>? CheckCreateCourseCSVFile(List<Course> checkList)
+        public List<Course> CheckCreateCourseCSVFile(List<Course> checkList)
         {
             try
             {
-                List<Course> courseList = new List<Course>();
-                courseList = _courseRepository.GetAll().ToList();
-                return courseList;
+                List<Course> errorList = new List<Course>();
+
+                foreach (var course in checkList)
+                {
+                    if(_courseRepository.Get(c => c.Coursecode == course.Coursecode).Any())
+                    {
+                        errorList.Add(course);
+                    }
+                }
+                return errorList;
             }
             catch (Exception e)
             {
@@ -87,14 +94,29 @@ namespace BLL.Services
 
         }
 
-        public void CreateCoursesWithCSV(List<CourseCSV> csv)
+        public List<Course> CreateCoursesWithCSV(List<CourseCSV> csv)
         {
             try
             {
                 List<Course> list = _mapper.Map<List<Course>>(csv);
-                string json = JsonSerializer.Serialize<List<Course>>(list);
-                var param = new CreateAvailableCourse() { Json = json };
-                Handle(param, _sharedRepositories.DapperContext);
+                List<Course> checkList = CheckCreateCourseCSVFile(list);
+
+                if (checkList.Any())
+                {
+                    foreach (Course check in checkList)
+                    {
+                        list.Remove(check);
+                    }
+                }
+                
+                if(list.Count > 0)
+                {
+                    string json = JsonSerializer.Serialize<List<Course>>(list);
+                    var param = new CreateAvailableCourse() { Json = json };
+                    Handle(param, _sharedRepositories.DapperContext);
+                }
+
+                return checkList;
             }
             catch (Exception e)
             {

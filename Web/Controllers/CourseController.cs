@@ -150,8 +150,12 @@ namespace Presentation.Controllers
         {
             try
             {
-                _courseService.CreateCoursesWithCSV(csv);
-                return Ok();
+                if (_courseService.CreateCoursesWithCSV(csv).Count() == csv.Count())
+                {
+                    return StatusCode(404);
+                }
+
+                return Ok(_courseService.CreateCoursesWithCSV(csv));
             }
             catch (BaseCustomApplicationException e)
             {
